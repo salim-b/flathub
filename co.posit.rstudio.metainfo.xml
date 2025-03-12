@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>co.posit.rstudio</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>AGPL-3.0-only</project_license>
+  <name>RStudio</name>
+  <summary>Integrated development environment for the R programming language</summary>
+  <description>
+    <p>
+      RStudio is an integrated development environment (IDE) for R, and
+      makes interacting with R quick and easy.
+    </p>
+    <p>
+      It includes a console, syntax-highlighting editor that supports
+      direct code execution, as well as tools for plotting, history,
+      debugging and workspace management.
+    </p>
+  </description>
+  <content_rating type="oars-1.1" />
+  <developer id="co.posit">
+    <name>Posit Software, PBC</name>
+  </developer>
+  <url type="homepage">https://posit.co/products/open-source/rstudio/</url>
+  <url type="bugtracker">https://github.com/rstudio/rstudio/issues</url>
+  <url type="contact">https://posit.co/about/contact/</url>
+  <url type="faq">https://support.posit.co/hc/en-us/articles/200486548-Frequently-Asked-Questions</url>
+  <url type="help">https://docs.posit.co/ide/user/</url>
+  <url type="vcs-browser">https://github.com/rstudio/rstudio</url>
+  <url type="contribute">https://github.com/rstudio/rstudio/blob/main/CONTRIBUTING.md</url>
+  <launchable type="desktop-id">co.posit.rstudio.desktop</launchable>
+  <requires>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <display_length compare="ge">768</display_length>
+  </requires>
+  <branding>
+    <color type="primary" scheme_preference="light">#223d50</color>
+    <color type="primary" scheme_preference="dark">#223d50</color>
+  </branding>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://iucar.fedorapeople.org/screenshots/rstudio/rstudio-ubuntu.png</image>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="2024.12.1+563" date="2025-02-13" >
+      <url type="details">https://docs.posit.co/ide/news/#rstudio-2024.12.1</url>
+    </release>
+  </releases>
+</component>
