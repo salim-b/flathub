@@ -2,6 +2,8 @@ id: co.posit.rstudio
 runtime: org.freedesktop.Sdk
 runtime-version: "24.08"
 sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.openjdk
 base: org.electronjs.Electron2.BaseApp
 base-version: "24.08"
 
@@ -10,6 +12,8 @@ command: run.sh
 finish-args:
   - --device=all                                                        # required to access `/sys/fs/cgroup/memory/memory.limit_in_bytes`
   - --env=ELECTRON_TRASH=gio
+  - --env=JAVA_HOME=/app/jdk
+  - --env=PATH=/app/jre/bin:/app/bin:/usr/bin
   - --env=PKG_CONFIG_PATH=/app/lib/pkgconfig                            # cf. https://manpages.debian.org/unstable/pkgconf/pkg-config.1.en.html#ENVIRONMENT
   - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons # cf. https://github.com/flatpak/flatpak/issues/740#issuecomment-612487891
   - --filesystem=home
@@ -21,73 +25,6 @@ finish-args:
   - --socket=system-bus
 
 modules:
-  # R & RStudio  
-  - name: R
-    buildsystem: autotools
-    config-opts:
-      - --enable-R-shlib
-    sources:
-      - type: archive
-        url: https://cran.r-project.org/src/base/R-4/R-4.4.3.tar.xz
-        sha256: 9f8a96d3f932f929780bea6461c65b2e5425ab0dea417d5beffc715c90da8d6c
-        x-checker-data:
-          type: anitya
-          project-id: 4150
-          url-template: https://cran.r-project.org/src/base/R-$major/R-$version.tar.xz
-
-  - name: zypak-wrapper
-    buildsystem: simple
-    build-commands:
-      - install -Dm755 -t /app/bin/ run.sh
-    sources:
-      - type: script
-        dest-filename: run.sh
-        commands:
-          - zypak-wrapper /app/opt/rstudio/rstudio --enable-features=UseOzonePlatform --ozone-platform-hint=auto "$@"
-
-  - name: RStudio
-    buildsystem: simple
-    build-commands:
-      - install -d /app/opt
-      - cp -r ./ /app/opt/rstudio
-      - install -Dm0644 rstudio.png /app/share/icons/hicolor/512x512/apps/co.posit.rstudio.png
-      - install -Dm0644 co.posit.rstudio.metainfo.xml /app/share/metainfo/co.posit.rstudio.metainfo.xml
-      - install -Dm0644 co.posit.rstudio.desktop /app/share/applications/co.posit.rstudio.desktop
-    sources:
-      - type: archive
-        url: https://download1.rstudio.org/electron/rhel9/x86_64/rstudio-2024.12.1-563-x86_64-fedora.tar.gz
-        sha256: bf46217bd7c3a7fd17646dbd53294722125699029dc5c43776591233c6b0e420
-        x-checker-data:
-          is-main-source: true
-          type: anitya
-          project-id: 13613
-          # TODO: template below most likely won't work since the build nr in `$version` is prefixed with a '+', but in the URL it's a '-'
-          url-template: https://download1.rstudio.org/electron/rhel9/x86_64/rstudio-$version-x86_64-fedora.tar.gz
-      - type: file
-        path: co.posit.rstudio.metainfo.xml
-      - type: file
-        path: co.posit.rstudio.desktop
-      - type: file
-        url: https://raw.githubusercontent.com/rstudio/rstudio/refs/tags/v2024.12.1%2B563/src/node/desktop/resources/freedesktop/icons/512x512/rstudio.png
-        sha256: bdcd5f0e2f0ebf908b7323a02ea1acf1adeddde14aaba89e0514b8d2d35d8338
-
-  # Additional tools
-  ## required to check HTML version of manual during `R CMD check`
-  - name: tidy-html5
-    buildsystem: cmake-ninja
-    config-opts:
-      - -DCMAKE_BUILD_TYPE=Release
-      - -DBUILD_SHARED_LIB=OFF
-    sources:
-      - type: git
-        url: https://github.com/htacg/tidy-html5.git
-        tag: 5.8.0
-        commit: 1ca37471b48a3498f985509828cb3cf85ea129f8
-        x-checker-data:
-          type: anitya
-          project-id: 13267
-          tag-template: $version
-
   # R package system dependencies
   ## required by the 'poppler' module
   - name: boost
@@ -102,7 +39,6 @@ modules:
         x-checker-data:
           type: anitya
           project-id: 6845
-          stable-only: true
           url-template: https://archives.boost.io/release/$version/source/boost_${major}_${minor}_$patch.tar.bz2
 
   - name: poppler-data
@@ -141,3 +77,94 @@ modules:
           type: anitya
           project-id: 3686
           url-template: https://poppler.freedesktop.org/poppler-$version.tar.xz
+
+  # Additional tools
+  ## suggested by 'R' module as well as required by 'ant' module and R pkg 'rJava' and dependents
+  - name: OpenJDK
+    buildsystem: simple
+    build-commands:
+      - /usr/lib/sdk/openjdk/installjdk.sh
+
+  ## required by 'R' module for `--with-libdeflate-compression`
+  ## cf. https://github.com/r-devel/r-svn/blob/920f616208e61fd04587f3d11d59306de8a8d6c9/configure#L1957-L1959
+  - name: libdeflate
+    buildsystem: cmake-ninja
+    sources:
+      - type: archive
+        url: https://github.com/ebiggers/libdeflate/releases/download/v1.23/libdeflate-1.23.tar.gz
+        sha256: 2351465b9e81883564b142b6c951045b36055c73c7e202c283fc1d90fe7fe22c
+        x-checker-data:
+          type: anitya
+          project-id: 242778
+          url-template: https://github.com/ebiggers/libdeflate/releases/download/v$version/libdeflate-$version.tar.gz
+
+  ## required to check HTML version of manual during `R CMD check`
+  - name: tidy-html5
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_SHARED_LIB=OFF
+    sources:
+      - type: git
+        url: https://github.com/htacg/tidy-html5.git
+        tag: 5.8.0
+        commit: 1ca37471b48a3498f985509828cb3cf85ea129f8
+        x-checker-data:
+          type: anitya
+          project-id: 13267
+          tag-template: $version
+
+  # R & RStudio
+  - name: R
+    buildsystem: autotools
+    build-options:
+      append-path: /app/jdk/bin
+      env:
+        JAVA_HOME: /app/jdk
+    config-opts:
+      - --enable-R-shlib
+    sources:
+      - type: archive
+        url: https://cran.r-project.org/src/base/R-4/R-4.4.3.tar.xz
+        sha256: 9f8a96d3f932f929780bea6461c65b2e5425ab0dea417d5beffc715c90da8d6c
+        x-checker-data:
+          type: anitya
+          project-id: 4150
+          url-template: https://cran.r-project.org/src/base/R-$major/R-$version.tar.xz
+
+  - name: zypak-wrapper
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 -t /app/bin/ run.sh
+    sources:
+      - type: script
+        dest-filename: run.sh
+        commands:
+          - zypak-wrapper /app/opt/rstudio/rstudio --enable-features=UseOzonePlatform --ozone-platform-hint=auto "$@"
+
+  - name: RStudio
+    buildsystem: simple
+    build-commands:
+      - install -Dm0644 rstudio.png /app/share/icons/hicolor/512x512/apps/co.posit.rstudio.png
+      - install -Dm0644 co.posit.rstudio.metainfo.xml /app/share/metainfo/co.posit.rstudio.metainfo.xml
+      - install -Dm0644 co.posit.rstudio.desktop /app/share/applications/co.posit.rstudio.desktop
+      - rm rstudio.png co.posit.rstudio.metainfo.xml co.posit.rstudio.desktop
+      - install -d /app/opt
+      - cp -r ./ /app/opt/rstudio
+    sources:
+      - type: archive
+        url: https://download1.rstudio.org/electron/rhel9/x86_64/rstudio-2024.12.1-563-x86_64-fedora.tar.gz
+        sha256: bf46217bd7c3a7fd17646dbd53294722125699029dc5c43776591233c6b0e420
+        x-checker-data:
+          is-main-source: true
+          type: anitya
+          project-id: 13613
+          # TODO: template below most likely won't work since the build nr in `$version` is prefixed with a '+', but in the URL it's a '-'
+          url-template: https://download1.rstudio.org/electron/rhel9/x86_64/rstudio-$version-x86_64-fedora.tar.gz
+      - type: file
+        path: co.posit.rstudio.metainfo.xml
+      - type: file
+        path: co.posit.rstudio.desktop
+      - type: file
+        url: https://raw.githubusercontent.com/rstudio/rstudio/refs/tags/v2024.12.1%2B563/src/node/desktop/resources/freedesktop/icons/512x512/rstudio.png
+        sha256: bdcd5f0e2f0ebf908b7323a02ea1acf1adeddde14aaba89e0514b8d2d35d8338
